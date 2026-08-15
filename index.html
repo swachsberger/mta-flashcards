@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MTA Subway Flashcards</title>
+<style>
+  :root{
+    --bg:#0e0e10; --panel:#1c1c21; --panel2:#26262d; --text:#f5f5f7;
+    --muted:#9a9aa5; --accent:#0039A6; --good:#2ecc71; --bad:#ff5a5f; --line:#33333c;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    background:var(--bg); color:var(--text); min-height:100vh;
+    display:flex; flex-direction:column; align-items:center; padding:24px 16px 60px;
+  }
+  h1{font-size:22px; margin:0 0 2px; letter-spacing:.3px}
+  .sub{color:var(--muted); font-size:13px; margin-bottom:20px}
+  .stats{display:flex; gap:20px; margin-bottom:16px; font-size:13px; color:var(--muted)}
+  .stats b{color:var(--text); font-size:15px}
+  .filters{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px; justify-content:center}
+  .chip{
+    padding:6px 12px; border-radius:999px; border:1px solid var(--line);
+    background:var(--panel); color:var(--muted); font-size:12px; cursor:pointer; user-select:none;
+  }
+  .chip.on{background:var(--accent); border-color:var(--accent); color:#fff}
+  .card{
+    width:100%; max-width:440px; background:var(--panel); border:1px solid var(--line);
+    border-radius:18px; padding:32px 24px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.35);
+  }
+  .boro{
+    display:inline-block; font-size:12px; letter-spacing:1px; text-transform:uppercase;
+    color:var(--muted); background:var(--panel2); padding:4px 12px; border-radius:999px; margin-bottom:16px;
+  }
+  .name{font-size:30px; font-weight:700; line-height:1.15; margin-bottom:6px}
+  .lineName{color:var(--muted); font-size:13px; margin-bottom:24px}
+  .prompt{color:var(--muted); font-size:13px; margin-bottom:14px}
+  .guess{
+    width:100%; padding:12px 14px; border-radius:12px; border:1px solid var(--line);
+    background:var(--panel2); color:var(--text); font-size:16px; text-align:center; letter-spacing:2px;
+    text-transform:uppercase; margin-bottom:14px; outline:none;
+  }
+  .guess:focus{border-color:var(--accent)}
+  .bullets{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; min-height:44px; margin:6px 0 18px}
+  .bullet{
+    width:42px; height:42px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-weight:700; font-size:19px; color:#fff; flex:0 0 auto;
+  }
+  .bullet.sir{font-size:13px}
+  .bullet.dim{opacity:.28}
+  .verdict{font-size:14px; font-weight:600; margin-bottom:16px; min-height:20px}
+  .verdict.ok{color:var(--good)} .verdict.no{color:var(--bad)}
+  .row{display:flex; gap:10px; justify-content:center; flex-wrap:wrap}
+  button.btn{
+    padding:12px 20px; border-radius:12px; border:none; font-size:15px; font-weight:600;
+    cursor:pointer; background:var(--panel2); color:var(--text);
+  }
+  button.btn:hover{filter:brightness(1.15)}
+  .btn.primary{background:var(--accent); color:#fff}
+  .btn.good{background:var(--good); color:#062}
+  .btn.bad{background:var(--bad); color:#400}
+  .hidden{display:none}
+  .foot{color:var(--muted); font-size:12px; margin-top:24px; text-align:center; max-width:440px}
+</style>
+</head>
+<body>
+  <h1>MTA Subway Flashcards</h1>
+  <div class="sub">Name the daytime lines that serve each station</div>
+
+  <div class="stats">
+    <span>Correct <b id="sCorrect">0</b></span>
+    <span>Seen <b id="sSeen">0</b></span>
+    <span>Streak <b id="sStreak">0</b></span>
+    <span>Deck <b id="sDeck">0</b></span>
+  </div>
+
+  <div class="filters" id="filters"></div>
+
+  <div class="card">
+    <span class="boro" id="boro">—</span>
+    <div class="name" id="name">Loading…</div>
+    <div class="lineName" id="lineName"></div>
+
+    <div id="guessWrap">
+      <div class="prompt">Type the lines (e.g. <b>N Q R</b>), then Reveal — or just Reveal to test yourself</div>
+      <input class="guess" id="guess" autocomplete="off" autocapitalize="characters" placeholder="? ? ?">
+    </div>
+
+    <div class="bullets hidden" id="bullets"></div>
+    <div class="verdict" id="verdict"></div>
+
+    <div class="row" id="preReveal">
+      <button class="btn primary" id="revealBtn">Reveal</button>
+      <button class="btn" id="skipBtn">Skip</button>
+    </div>
+    <div class="row hidden" id="postReveal">
+      <button class="btn good" id="gotBtn">Got it</button>
+      <button class="btn bad" id="missBtn">Missed</button>
+    </div>
+  </div>
+
+  <div class="foot">493 stations · data from data.ny.gov (MTA). Grading compares your typed lines against the answer; self-grade if you just eyeball it.</div>
+
+<script>
+const STATIONS = [{"n":"15 St-Prospect Park","b":"Bk","l":"6th Av - Culver","r":["F","G"]},{"n":"18 Av","b":"Bk","l":"West End","r":["D"]},{"n":"18 Av","b":"Bk","l":"Sea Beach","r":["N"]},{"n":"18 Av","b":"Bk","l":"6th Av - Culver","r":["F"]},{"n":"20 Av","b":"Bk","l":"West End","r":["D"]},{"n":"20 Av","b":"Bk","l":"Sea Beach","r":["N"]},{"n":"25 Av","b":"Bk","l":"West End","r":["D"]},{"n":"25 St","b":"Bk","l":"4th Av","r":["R"]},{"n":"36 St","b":"Bk","l":"4th Av","r":["D","N","R"]},{"n":"4 Av-9 St","b":"Bk","l":"4th Av","r":["R"]},{"n":"4 Av-9 St","b":"Bk","l":"6th Av - Culver","r":["F","G"]},{"n":"45 St","b":"Bk","l":"4th Av","r":["R"]},{"n":"50 St","b":"Bk","l":"West End","r":["D"]},{"n":"53 St","b":"Bk","l":"4th Av","r":["R"]},{"n":"55 St","b":"Bk","l":"West End","r":["D"]},{"n":"59 St","b":"Bk","l":"4th Av","r":["N","R"]},{"n":"62 St","b":"Bk","l":"West End","r":["D"]},{"n":"7 Av","b":"Bk","l":"Broadway - Brighton","r":["B","Q"]},{"n":"7 Av","b":"Bk","l":"6th Av - Culver","r":["F","G"]},{"n":"71 St","b":"Bk","l":"West End","r":["D"]},{"n":"77 St","b":"Bk","l":"4th Av","r":["R"]},{"n":"79 St","b":"Bk","l":"West End","r":["D"]},{"n":"8 Av","b":"Bk","l":"Sea Beach","r":["N"]},{"n":"86 St","b":"Bk","l":"4th Av","r":["R"]},{"n":"86 St","b":"Bk","l":"Sea Beach","r":["N"]},{"n":"9 Av","b":"Bk","l":"West End","r":["D"]},{"n":"Alabama Av","b":"Bk","l":"Jamaica","r":["J","Z"]},{"n":"Atlantic Av","b":"Bk","l":"Canarsie","r":["L"]},{"n":"Atlantic Av-Barclays Ctr","b":"Bk","l":"4th Av","r":["D","N","R"]},{"n":"Atlantic Av-Barclays Ctr","b":"Bk","l":"Broadway - Brighton","r":["B","Q"]},{"n":"Atlantic Av-Barclays Ctr","b":"Bk","l":"Eastern Pky","r":["2","3","4","5"]},{"n":"Avenue H","b":"Bk","l":"Broadway - Brighton","r":["Q"]},{"n":"Avenue I","b":"Bk","l":"6th Av - Culver","r":["F"]},{"n":"Avenue J","b":"Bk","l":"Broadway - Brighton","r":["Q"]},{"n":"Avenue M","b":"Bk","l":"Broadway - Brighton","r":["Q"]},{"n":"Avenue N","b":"Bk","l":"6th Av - Culver","r":["F"]},{"n":"Avenue P","b":"Bk","l":"6th Av - Culver","r":["F"]},{"n":"Avenue U","b":"Bk","l":"Broadway - Brighton","r":["Q"]},{"n":"Avenue U","b":"Bk","l":"Sea Beach","r":["N"]},{"n":"Avenue U","b":"Bk","l":"6th Av - Culver","r":["F"]},{"n":"Avenue X","b":"Bk","l":"6th Av - Culver","r":["F"]},{"n":"Bay 50 St","b":"Bk","l":"West End","r":["D"]},{"n":"Bay Pkwy","b":"Bk","l":"West End","r":["D"]},{"n":"Bay Pkwy","b":"Bk","l":"Sea Beach","r":["N"]},{"n":"Bay Pkwy","b":"Bk","l":"6th Av - Culver","r":["F"]},{"n":"Bay Ridge Av","b":"Bk","l":"4th Av","r":["R"]},{"n":"Bay Ridge-95 St","b":"Bk","l":"4th Av","r":["R"]},{"n":"Bedford Av","b":"Bk","l":"Canarsie","r":["L"]},{"n":"Bedford-Nostrand Avs","b":"Bk","l":"Crosstown","r":["G"]},{"n":"Bergen St","b":"Bk","l":"6th Av - Culver","r":["F","G"]},{"n":"Bergen St","b":"Bk","l":"Eastern Pky","r":["2","3"]},{"n":"Beverley Rd","b":"Bk","l":"Broadway - Brighton","r":["Q"]},{"n":"Beverly Rd","b":"Bk","l":"Nostrand","r":["2","5"]},{"n":"Borough Hall","b":"Bk","l":"Clark St","r":["2","3"]},{"n":"Borough Hall","b":"Bk","l":"Eastern Pky","r":["4","5"]},{"n":"Botanic Garden","b":"Bk","l":"Franklin Shuttle","r":["S"]},{"n":"Brighton Beach","b":"Bk","l":"Broadway - Brighton","r":["B","Q"]},{"n":"Broadway","b":"Bk","l":"Crosstown","r":["G"]},{"n":"Broadway Junction","b":"Bk","l":"Jamaica","r":["J","Z"]},{"n":"Broadway Junction","b":"Bk","l":"Canarsie","r":["L"]},{"n":"Broadway Junction","b":"Bk","l":"8th Av - Fulton St","r":["A","C"]},{"n":"Bushwick Av-Aberdeen St","b":"Bk","l":"Canarsie","r":["L"]},{"n":"Canarsie-Rockaway Pkwy","b":"Bk","l":"Canarsie","r":["L"]},{"n":"Carroll St","b":"Bk","l":"6th Av - Culver","r":["F","G"]},{"n":"Central Av","b":"Bk","l":"Myrtle Av","r":["M"]},{"n":"Chauncey St","b":"Bk","l":"Jamaica","r":["J","Z"]},{"n":"Church Av","b":"Bk","l":"Broadway - Brighton","r":["B","Q"]},{"n":"Church Av","b":"Bk","l":"6th Av - Culver","r":["F","G"]},{"n":"Church Av","b":"Bk","l":"Nostrand","r":["2","5"]},{"n":"Clark St","b":"Bk","l":"Clark St","r":["2","3"]},{"n":"Classon Av","b":"Bk","l":"Crosstown","r":["G"]},{"n":"Cleveland St","b":"Bk","l":"Jamaica","r":["J"]},{"n":"Clinton-Washington Avs","b":"Bk","l":"8th Av - Fulton St","r":["C"]},{"n":"Clinton-Washington Avs","b":"Bk","l":"Crosstown","r":["G"]},{"n":"Coney Island-Stillwell Av","b":"Bk","l":"Sea Beach / West End / Culver / Brighton","r":["D","F","N","Q"]},{"n":"Cortelyou Rd","b":"Bk","l":"Broadway - Brighton","r":["Q"]},{"n":"Court St","b":"Bk","l":"Broadway","r":["R"]},{"n":"Crescent St","b":"Bk","l":"Jamaica","r":["J","Z"]},{"n":"Crown Hts-Utica Av","b":"Bk","l":"Eastern Pky","r":["3","4"]},{"n":"Cypress Hills","b":"Bk","l":"Jamaica","r":["J"]},{"n":"DeKalb Av","b":"Bk","l":"Broadway - Brighton","r":["B","Q","R"]},{"n":"DeKalb Av","b":"Bk","l":"Canarsie","r":["L"]},{"n":"Ditmas Av","b":"Bk","l":"6th Av - Culver","r":["F"]},{"n":"East 105 St","b":"Bk","l":"Canarsie","r":["L"]},{"n":"Eastern Pkwy-Brooklyn Museum","b":"Bk","l":"Eastern Pky","r":["2","3"]},{"n":"Euclid Av","b":"Bk","l":"8th Av - Fulton St","r":["A","C"]},{"n":"Flatbush Av-Brooklyn College","b":"Bk","l":"Nostrand","r":["2","5"]},{"n":"Flushing Av","b":"Bk","l":"Jamaica","r":["J","M"]},{"n":"Flushing Av","b":"Bk","l":"Crosstown","r":["G"]},{"n":"Fort Hamilton Pkwy","b":"Bk","l":"West End","r":["D"]},{"n":"Fort Hamilton Pkwy","b":"Bk","l":"Sea Beach","r":["N"]},{"n":"Fort Hamilton Pkwy","b":"Bk","l":"6th Av - Culver","r":["F","G"]},{"n":"Franklin Av","b":"Bk","l":"Franklin Shuttle","r":["S"]},{"n":"Franklin Av","b":"Bk","l":"8th Av - Fulton St","r":["C"]},{"n":"Franklin Av-Medgar Evers College","b":"Bk","l":"Eastern Pky","r":["2","3","4","5"]},{"n":"Fulton St","b":"Bk","l":"Crosstown","r":["G"]},{"n":"Gates Av","b":"Bk","l":"Jamaica","r":["J","Z"]},{"n":"Graham Av","b":"Bk","l":"Canarsie","r":["L"]},{"n":"Grand Army Plaza","b":"Bk","l":"Eastern Pky","r":["2","3"]},{"n":"Grand St","b":"Bk","l":"Canarsie","r":["L"]},{"n":"Grant Av","b":"Bk","l":"Liberty Av","r":["A"]},{"n":"Greenpoint Av","b":"Bk","l":"Crosstown","r":["G"]},{"n":"Halsey St","b":"Bk","l":"Jamaica","r":["J"]},{"n":"Hewes St","b":"Bk","l":"Jamaica","r":["J","M"]},{"n":"High St","b":"Bk","l":"8th Av - Fulton St","r":["A","C"]},{"n":"Hoyt St","b":"Bk","l":"Eastern Pky","r":["2","3"]},{"n":"Hoyt-Schermerhorn Sts","b":"Bk","l":"8th Av - Fulton St","r":["A","C","G"]},{"n":"Jay St-MetroTech","b":"Bk","l":"Broadway","r":["R"]},{"n":"Jay St-MetroTech","b":"Bk","l":"8th Av - Fulton St","r":["A","C","F"]},{"n":"Jefferson St","b":"Bk","l":"Canarsie","r":["L"]},{"n":"Junius St","b":"Bk","l":"Eastern Pky","r":["3"]},{"n":"Kings Hwy","b":"Bk","l":"Broadway - Brighton","r":["B","Q"]},{"n":"Kings Hwy","b":"Bk","l":"Sea Beach","r":["N"]},{"n":"Kings Hwy","b":"Bk","l":"6th Av - Culver","r":["F"]},{"n":"Kingston Av","b":"Bk","l":"Eastern Pky","r":["3"]},{"n":"Kingston-Throop Avs","b":"Bk","l":"8th Av - Fulton St","r":["C"]},{"n":"Knickerbocker Av","b":"Bk","l":"Myrtle Av","r":["M"]},{"n":"Kosciuszko St","b":"Bk","l":"Jamaica","r":["J"]},{"n":"Lafayette Av","b":"Bk","l":"8th Av - Fulton St","r":["C"]},{"n":"Liberty Av","b":"Bk","l":"8th Av - Fulton St","r":["C"]},{"n":"Livonia Av","b":"Bk","l":"Canarsie","r":["L"]},{"n":"Lorimer St","b":"Bk","l":"Jamaica","r":["J","M"]},{"n":"Lorimer St","b":"Bk","l":"Canarsie","r":["L"]},{"n":"Marcy Av","b":"Bk","l":"Jamaica","r":["J","M","Z"]},{"n":"Metropolitan Av","b":"Bk","l":"Crosstown","r":["G"]},{"n":"Montrose Av","b":"Bk","l":"Canarsie","r":["L"]},{"n":"Morgan Av","b":"Bk","l":"Canarsie","r":["L"]},{"n":"Myrtle Av","b":"Bk","l":"Jamaica","r":["J","M","Z"]},{"n":"Myrtle-Willoughby Avs","b":"Bk","l":"Crosstown","r":["G"]},{"n":"Myrtle-Wyckoff Avs","b":"Bk","l":"Myrtle Av","r":["M"]},{"n":"Myrtle-Wyckoff Avs","b":"Bk","l":"Canarsie","r":["L"]},{"n":"Nassau Av","b":"Bk","l":"Crosstown","r":["G"]},{"n":"Neck Rd","b":"Bk","l":"Broadway - Brighton","r":["Q"]},{"n":"Neptune Av","b":"Bk","l":"6th Av - Culver","r":["F"]},{"n":"Nevins St","b":"Bk","l":"Eastern Pky","r":["2","3","4","5"]},{"n":"New Lots Av","b":"Bk","l":"Canarsie","r":["L"]},{"n":"New Lots Av","b":"Bk","l":"Eastern Pky","r":["3"]},{"n":"New Utrecht Av","b":"Bk","l":"Sea Beach","r":["N"]},{"n":"Newkirk Av-Little Haiti","b":"Bk","l":"Nostrand","r":["2","5"]},{"n":"Newkirk Plaza","b":"Bk","l":"Broadway - Brighton","r":["B","Q"]},{"n":"Norwood Av","b":"Bk","l":"Jamaica","r":["J","Z"]},{"n":"Nostrand Av","b":"Bk","l":"8th Av - Fulton St","r":["A","C"]},{"n":"Nostrand Av","b":"Bk","l":"Eastern Pky","r":["3"]},{"n":"Ocean Pkwy","b":"Bk","l":"Broadway - Brighton","r":["Q"]},{"n":"Park Pl","b":"Bk","l":"Franklin Shuttle","r":["S"]},{"n":"Parkside Av","b":"Bk","l":"Broadway - Brighton","r":["Q"]},{"n":"Pennsylvania Av","b":"Bk","l":"Eastern Pky","r":["3"]},{"n":"President St-Medgar Evers College","b":"Bk","l":"Nostrand","r":["2","5"]},{"n":"Prospect Av","b":"Bk","l":"4th Av","r":["R"]},{"n":"Prospect Park","b":"Bk","l":"Broadway - Brighton","r":["B","Q","S"]},{"n":"Ralph Av","b":"Bk","l":"8th Av - Fulton St","r":["C"]},{"n":"Rockaway Av","b":"Bk","l":"8th Av - Fulton St","r":["C"]},{"n":"Rockaway Av","b":"Bk","l":"Eastern Pky","r":["3"]},{"n":"Saratoga Av","b":"Bk","l":"Eastern Pky","r":["3"]},{"n":"Sheepshead Bay","b":"Bk","l":"Broadway - Brighton","r":["B","Q"]},{"n":"Shepherd Av","b":"Bk","l":"8th Av - Fulton St","r":["C"]},{"n":"Smith-9 Sts","b":"Bk","l":"6th Av - Culver","r":["F","G"]},{"n":"Sterling St","b":"Bk","l":"Nostrand","r":["2","5"]},{"n":"Sutter Av","b":"Bk","l":"Canarsie","r":["L"]},{"n":"Sutter Av-Rutland Rd","b":"Bk","l":"Eastern Pky","r":["3"]},{"n":"Union St","b":"Bk","l":"4th Av","r":["R"]},{"n":"Utica Av","b":"Bk","l":"8th Av - Fulton St","r":["A","C"]},{"n":"Van Siclen Av","b":"Bk","l":"Jamaica","r":["J","Z"]},{"n":"Van Siclen Av","b":"Bk","l":"8th Av - Fulton St","r":["C"]},{"n":"Van Siclen Av","b":"Bk","l":"Eastern Pky","r":["3"]},{"n":"W 8 St-NY Aquarium","b":"Bk","l":"Broadway - Brighton","r":["F","Q"]},{"n":"Wilson Av","b":"Bk","l":"Canarsie","r":["L"]},{"n":"Winthrop St","b":"Bk","l":"Nostrand","r":["2","5"]},{"n":"York St","b":"Bk","l":"6th Av - Culver","r":["F"]},{"n":"138 St-Grand Concourse","b":"Bx","l":"Jerome Av","r":["4","5"]},{"n":"149 St-Hostos","b":"Bx","l":"Jerome Av","r":["4"]},{"n":"149 St-Hostos","b":"Bx","l":"Lenox - White Plains Rd","r":["2","5"]},{"n":"161 St-Yankee Stadium","b":"Bx","l":"Concourse","r":["B","D"]},{"n":"161 St-Yankee Stadium","b":"Bx","l":"Jerome Av","r":["4"]},{"n":"167 St","b":"Bx","l":"Concourse","r":["B","D"]},{"n":"167 St","b":"Bx","l":"Jerome Av","r":["4"]},{"n":"170 St","b":"Bx","l":"Concourse","r":["B","D"]},{"n":"170 St","b":"Bx","l":"Jerome Av","r":["4"]},{"n":"174 St","b":"Bx","l":"Lenox - White Plains Rd","r":["2","5"]},{"n":"174-175 Sts","b":"Bx","l":"Concourse","r":["B","D"]},{"n":"176 St","b":"Bx","l":"Jerome Av","r":["4"]},{"n":"182-183 Sts","b":"Bx","l":"Concourse","r":["B","D"]},{"n":"183 St","b":"Bx","l":"Jerome Av","r":["4"]},{"n":"219 St","b":"Bx","l":"Lenox - White Plains Rd","r":["2","5"]},{"n":"225 St","b":"Bx","l":"Lenox - White Plains Rd","r":["2","5"]},{"n":"231 St","b":"Bx","l":"Broadway - 7Av","r":["1"]},{"n":"233 St","b":"Bx","l":"Lenox - White Plains Rd","r":["2","5"]},{"n":"238 St","b":"Bx","l":"Broadway - 7Av","r":["1"]},{"n":"3 Av-138 St","b":"Bx","l":"Pelham","r":["6"]},{"n":"3 Av-149 St","b":"Bx","l":"Lenox - White Plains Rd","r":["2","5"]},{"n":"Allerton Av","b":"Bx","l":"Lenox - White Plains Rd","r":["2","5"]},{"n":"Baychester Av","b":"Bx","l":"Dyre Av","r":["5"]},{"n":"Bedford Park Blvd","b":"Bx","l":"Concourse","r":["B","D"]},{"n":"Bedford Park Blvd-Lehman College","b":"Bx","l":"Jerome Av","r":["4"]},{"n":"Bronx Park East","b":"Bx","l":"Lenox - White Plains Rd","r":["2","5"]},{"n":"Brook Av","b":"Bx","l":"Pelham","r":["6"]},{"n":"Buhre Av","b":"Bx","l":"Pelham","r":["6"]},{"n":"Burke Av","b":"Bx","l":"Lenox - White Plains Rd","r":["2","5"]},{"n":"Burnside Av","b":"Bx","l":"Jerome Av","r":["4"]},{"n":"Castle Hill Av","b":"Bx","l":"Pelham","r":["6"]},{"n":"Cypress Av","b":"Bx","l":"Pelham","r":["6"]},{"n":"E 143 St-St Mary's St","b":"Bx","l":"Pelham","r":["6"]},{"n":"E 149 St","b":"Bx","l":"Pelham","r":["6"]},{"n":"E 180 St","b":"Bx","l":"Lenox - White Plains Rd","r":["2","5"]},{"n":"Eastchester-Dyre Av","b":"Bx","l":"Dyre Av","r":["5"]},{"n":"Elder Av","b":"Bx","l":"Pelham","r":["6"]},{"n":"Fordham Rd","b":"Bx","l":"Concourse","r":["B","D"]},{"n":"Fordham Rd","b":"Bx","l":"Jerome Av","r":["4"]},{"n":"Freeman St","b":"Bx","l":"Lenox - White Plains Rd","r":["2","5"]},{"n":"Gun Hill Rd","b":"Bx","l":"Lenox - White Plains Rd","r":["2","5"]},{"n":"Gun Hill Rd","b":"Bx","l":"Dyre Av","r":["5"]},{"n":"Hunts Point Av","b":"Bx","l":"Pelham","r":["6"]},{"n":"Intervale Av","b":"Bx","l":"Lenox - White Plains Rd","r":["2","5"]},{"n":"Jackson Av","b":"Bx","l":"Lenox - White Plains Rd","r":["2","5"]},{"n":"Kingsbridge Rd","b":"Bx","l":"Concourse","r":["B","D"]},{"n":"Kingsbridge Rd","b":"Bx","l":"Jerome Av","r":["4"]},{"n":"Longwood Av","b":"Bx","l":"Pelham","r":["6"]},{"n":"Middletown Rd","b":"Bx","l":"Pelham","r":["6"]},{"n":"Morris Park","b":"Bx","l":"Dyre Av","r":["5"]},{"n":"Morrison Av-Soundview","b":"Bx","l":"Pelham","r":["6"]},{"n":"Mosholu Pkwy","b":"Bx","l":"Jerome Av","r":["4"]},{"n":"Mt Eden Av","b":"Bx","l":"Jerome Av","r":["4"]},{"n":"Nereid Av","b":"Bx","l":"Lenox - White Plains Rd","r":["2","5"]},{"n":"Norwood-205 St","b":"Bx","l":"Concourse","r":["D"]},{"n":"Parkchester","b":"Bx","l":"Pelham","r":["6"]},{"n":"Pelham Bay Park","b":"Bx","l":"Pelham","r":["6"]},{"n":"Pelham Pkwy","b":"Bx","l":"Lenox - White Plains Rd","r":["2","5"]},{"n":"Pelham Pkwy","b":"Bx","l":"Dyre Av","r":["5"]},{"n":"Prospect Av","b":"Bx","l":"Lenox - White Plains Rd","r":["2","5"]},{"n":"Simpson St","b":"Bx","l":"Lenox - White Plains Rd","r":["2","5"]},{"n":"St Lawrence Av","b":"Bx","l":"Pelham","r":["6"]},{"n":"Tremont Av","b":"Bx","l":"Concourse","r":["B","D"]},{"n":"Van Cortlandt Park-242 St","b":"Bx","l":"Broadway - 7Av","r":["1"]},{"n":"Wakefield-241 St","b":"Bx","l":"Lenox - White Plains Rd","r":["2"]},{"n":"West Farms Sq-E Tremont Av","b":"Bx","l":"Lenox - White Plains Rd","r":["2","5"]},{"n":"Westchester Sq-E Tremont Av","b":"Bx","l":"Pelham","r":["6"]},{"n":"Whitlock Av","b":"Bx","l":"Pelham","r":["6"]},{"n":"Woodlawn","b":"Bx","l":"Jerome Av","r":["4"]},{"n":"Zerega Av","b":"Bx","l":"Pelham","r":["6"]},{"n":"1 Av","b":"M","l":"Canarsie","r":["L"]},{"n":"103 St","b":"M","l":"8th Av - Fulton St","r":["B","C"]},{"n":"103 St","b":"M","l":"Broadway - 7Av","r":["1"]},{"n":"103 St","b":"M","l":"Lexington Av","r":["6"]},{"n":"110 St","b":"M","l":"Lexington Av","r":["6"]},{"n":"110 St-Malcolm X Plaza","b":"M","l":"Lenox - White Plains Rd","r":["2","3"]},{"n":"116 St","b":"M","l":"8th Av - Fulton St","r":["B","C"]},{"n":"116 St","b":"M","l":"Lexington Av","r":["6"]},{"n":"116 St","b":"M","l":"Lenox - White Plains Rd","r":["2","3"]},{"n":"116 St-Columbia University","b":"M","l":"Broadway - 7Av","r":["1"]},{"n":"125 St","b":"M","l":"8th Av - Fulton St","r":["A","B","C","D"]},{"n":"125 St","b":"M","l":"Broadway - 7Av","r":["1"]},{"n":"125 St","b":"M","l":"Lexington Av","r":["4","5","6"]},{"n":"125 St","b":"M","l":"Lenox - White Plains Rd","r":["2","3"]},{"n":"135 St","b":"M","l":"8th Av - Fulton St","r":["B","C"]},{"n":"135 St","b":"M","l":"Lenox - White Plains Rd","r":["2","3"]},{"n":"137 St-City College","b":"M","l":"Broadway - 7Av","r":["1"]},{"n":"14 St","b":"M","l":"8th Av - Fulton St","r":["A","C","E"]},{"n":"14 St","b":"M","l":"6th Av - Culver","r":["F","M"]},{"n":"14 St","b":"M","l":"Broadway - 7Av","r":["1","2","3"]},{"n":"14 St-Union Sq","b":"M","l":"Broadway - Brighton","r":["N","Q","R","W"]},{"n":"14 St-Union Sq","b":"M","l":"Canarsie","r":["L"]},{"n":"14 St-Union Sq","b":"M","l":"Lexington Av","r":["4","5","6"]},{"n":"145 St","b":"M","l":"8th Av - Fulton St","r":["A","B","C","D"]},{"n":"145 St","b":"M","l":"Broadway - 7Av","r":["1"]},{"n":"145 St","b":"M","l":"Lenox - White Plains Rd","r":["3"]},{"n":"155 St","b":"M","l":"8th Av - Fulton St","r":["C"]},{"n":"155 St","b":"M","l":"Concourse","r":["B","D"]},{"n":"157 St","b":"M","l":"Broadway - 7Av","r":["1"]},{"n":"163 St-Amsterdam Av","b":"M","l":"8th Av - Fulton St","r":["C"]},{"n":"168 St","b":"M","l":"8th Av - Fulton St","r":["A","C"]},{"n":"168 St-Washington Hts","b":"M","l":"Broadway - 7Av","r":["1"]},{"n":"175 St","b":"M","l":"8th Av - Fulton St","r":["A"]},{"n":"18 St","b":"M","l":"Broadway - 7Av","r":["1"]},{"n":"181 St","b":"M","l":"8th Av - Fulton St","r":["A"]},{"n":"181 St","b":"M","l":"Broadway - 7Av","r":["1"]},{"n":"190 St","b":"M","l":"8th Av - Fulton St","r":["A"]},{"n":"191 St","b":"M","l":"Broadway - 7Av","r":["1"]},{"n":"2 Av","b":"M","l":"6th Av - Culver","r":["F"]},{"n":"207 St","b":"M","l":"Broadway - 7Av","r":["1"]},{"n":"215 St","b":"M","l":"Broadway - 7Av","r":["1"]},{"n":"23 St","b":"M","l":"Broadway - Brighton","r":["R","W"]},{"n":"23 St","b":"M","l":"8th Av - Fulton St","r":["C","E"]},{"n":"23 St","b":"M","l":"6th Av - Culver","r":["F","M"]},{"n":"23 St","b":"M","l":"Broadway - 7Av","r":["1"]},{"n":"23 St-Baruch College","b":"M","l":"Lexington Av","r":["6"]},{"n":"28 St","b":"M","l":"Broadway - Brighton","r":["R","W"]},{"n":"28 St","b":"M","l":"Broadway - 7Av","r":["1"]},{"n":"28 St","b":"M","l":"Lexington Av","r":["6"]},{"n":"3 Av","b":"M","l":"Canarsie","r":["L"]},{"n":"33 St","b":"M","l":"Lexington Av","r":["6"]},{"n":"34 St-Herald Sq","b":"M","l":"Broadway - Brighton","r":["N","Q","R","W"]},{"n":"34 St-Herald Sq","b":"M","l":"6th Av - Culver","r":["B","D","F","M"]},{"n":"34 St-Hudson Yards","b":"M","l":"Flushing","r":["7"]},{"n":"34 St-Penn Station","b":"M","l":"8th Av - Fulton St","r":["A","C","E"]},{"n":"34 St-Penn Station","b":"M","l":"Broadway - 7Av","r":["1","2","3"]},{"n":"42 St-Bryant Pk","b":"M","l":"6th Av - Culver","r":["B","D","F","M"]},{"n":"42 St-Port Authority Bus Terminal","b":"M","l":"8th Av - Fulton St","r":["A","C","E"]},{"n":"47-50 Sts-Rockefeller Ctr","b":"M","l":"6th Av - Culver","r":["B","D","F","M"]},{"n":"49 St","b":"M","l":"Broadway - Brighton","r":["N","R","W"]},{"n":"5 Av","b":"M","l":"Flushing","r":["7"]},{"n":"5 Av/53 St","b":"M","l":"Queens Blvd","r":["E","F"]},{"n":"5 Av/59 St","b":"M","l":"Astoria","r":["N","R","W"]},{"n":"50 St","b":"M","l":"8th Av - Fulton St","r":["C","E"]},{"n":"50 St","b":"M","l":"Broadway - 7Av","r":["1"]},{"n":"51 St","b":"M","l":"Lexington Av","r":["6"]},{"n":"57 St","b":"M","l":"6th Av - Culver","r":["M"]},{"n":"57 St-7 Av","b":"M","l":"Broadway - Brighton","r":["N","Q","R","W"]},{"n":"59 St","b":"M","l":"Lexington Av","r":["4","5","6"]},{"n":"59 St-Columbus Circle","b":"M","l":"8th Av - Fulton St","r":["A","B","C","D"]},{"n":"59 St-Columbus Circle","b":"M","l":"Broadway - 7Av","r":["1"]},{"n":"6 Av","b":"M","l":"Canarsie","r":["L"]},{"n":"66 St-Lincoln Center","b":"M","l":"Broadway - 7Av","r":["1"]},{"n":"68 St-Hunter College","b":"M","l":"Lexington Av","r":["6"]},{"n":"7 Av","b":"M","l":"Queens Blvd","r":["B","D","E"]},{"n":"72 St","b":"M","l":"8th Av - Fulton St","r":["B","C"]},{"n":"72 St","b":"M","l":"Broadway - 7Av","r":["1","2","3"]},{"n":"72 St","b":"M","l":"Second Av","r":["Q"]},{"n":"77 St","b":"M","l":"Lexington Av","r":["6"]},{"n":"79 St","b":"M","l":"Broadway - 7Av","r":["1"]},{"n":"8 Av","b":"M","l":"Canarsie","r":["L"]},{"n":"8 St-NYU","b":"M","l":"Broadway - Brighton","r":["R","W"]},{"n":"81 St-Museum of Natural History","b":"M","l":"8th Av - Fulton St","r":["B","C"]},{"n":"86 St","b":"M","l":"8th Av - Fulton St","r":["B","C"]},{"n":"86 St","b":"M","l":"Broadway - 7Av","r":["1"]},{"n":"86 St","b":"M","l":"Lexington Av","r":["4","5","6"]},{"n":"86 St","b":"M","l":"Second Av","r":["Q"]},{"n":"96 St","b":"M","l":"8th Av - Fulton St","r":["B","C"]},{"n":"96 St","b":"M","l":"Broadway - 7Av","r":["1","2","3"]},{"n":"96 St","b":"M","l":"Lexington Av","r":["6"]},{"n":"96 St","b":"M","l":"Second Av","r":["Q"]},{"n":"Astor Pl","b":"M","l":"Lexington Av","r":["6"]},{"n":"Bleecker St","b":"M","l":"Lexington Av","r":["6"]},{"n":"Bowery","b":"M","l":"Jamaica","r":["J","Z"]},{"n":"Bowling Green","b":"M","l":"Lexington Av","r":["4","5"]},{"n":"Broad St","b":"M","l":"Jamaica","r":["J","Z"]},{"n":"Broadway-Lafayette St","b":"M","l":"6th Av - Culver","r":["B","D","F","M"]},{"n":"Brooklyn Bridge-City Hall","b":"M","l":"Lexington Av","r":["4","5","6"]},{"n":"Canal St","b":"M","l":"Broadway","r":["R","W"]},{"n":"Canal St","b":"M","l":"Manhattan Bridge","r":["N","Q"]},{"n":"Canal St","b":"M","l":"Jamaica","r":["J","Z"]},{"n":"Canal St","b":"M","l":"8th Av - Fulton St","r":["A","C","E"]},{"n":"Canal St","b":"M","l":"Broadway - 7Av","r":["1"]},{"n":"Canal St","b":"M","l":"Lexington Av","r":["6"]},{"n":"Cathedral Pkwy (110 St)","b":"M","l":"8th Av - Fulton St","r":["B","C"]},{"n":"Cathedral Pkwy (110 St)","b":"M","l":"Broadway - 7Av","r":["1"]},{"n":"Chambers St","b":"M","l":"Jamaica","r":["J","Z"]},{"n":"Chambers St","b":"M","l":"8th Av - Fulton St","r":["A","C"]},{"n":"Chambers St","b":"M","l":"Broadway - 7Av","r":["1","2","3"]},{"n":"Christopher St-Stonewall","b":"M","l":"Broadway - 7Av","r":["1"]},{"n":"City Hall","b":"M","l":"Broadway","r":["R","W"]},{"n":"Cortlandt St","b":"M","l":"Broadway","r":["R","W"]},{"n":"Delancey St-Essex St","b":"M","l":"Jamaica","r":["J","M","Z"]},{"n":"Delancey St-Essex St","b":"M","l":"6th Av - Culver","r":["F"]},{"n":"Dyckman St","b":"M","l":"8th Av - Fulton St","r":["A"]},{"n":"Dyckman St","b":"M","l":"Broadway - 7Av","r":["1"]},{"n":"East Broadway","b":"M","l":"6th Av - Culver","r":["F"]},{"n":"Franklin St","b":"M","l":"Broadway - 7Av","r":["1"]},{"n":"Fulton St","b":"M","l":"Jamaica","r":["J","Z"]},{"n":"Fulton St","b":"M","l":"8th Av - Fulton St","r":["A","C"]},{"n":"Fulton St","b":"M","l":"Clark St","r":["2","3"]},{"n":"Fulton St","b":"M","l":"Lexington Av","r":["4","5"]},{"n":"Grand Central-42 St","b":"M","l":"Lexington Av","r":["4","5","6"]},{"n":"Grand Central-42 St","b":"M","l":"Flushing","r":["7"]},{"n":"Grand Central-42 St","b":"M","l":"Lexington - Shuttle","r":["S"]},{"n":"Grand St","b":"M","l":"6th Av - Culver","r":["B","D"]},{"n":"Harlem-148 St","b":"M","l":"Lenox - White Plains Rd","r":["3"]},{"n":"Houston St","b":"M","l":"Broadway - 7Av","r":["1"]},{"n":"Inwood-207 St","b":"M","l":"8th Av - Fulton St","r":["A"]},{"n":"Lexington Av/53 St","b":"M","l":"Queens Blvd","r":["E","F"]},{"n":"Lexington Av/59 St","b":"M","l":"Astoria","r":["N","R","W"]},{"n":"Lexington Av/63 St","b":"M","l":"63rd St","r":["M","Q"]},{"n":"Marble Hill-225 St","b":"M","l":"Broadway - 7Av","r":["1"]},{"n":"Park Place","b":"M","l":"Clark St","r":["2","3"]},{"n":"Prince St","b":"M","l":"Broadway - Brighton","r":["R","W"]},{"n":"Rector St","b":"M","l":"Broadway","r":["R","W"]},{"n":"Rector St","b":"M","l":"Broadway - 7Av","r":["1"]},{"n":"Roosevelt Island","b":"M","l":"63rd St","r":["M"]},{"n":"South Ferry","b":"M","l":"Broadway - 7Av","r":["1"]},{"n":"Spring St","b":"M","l":"8th Av - Fulton St","r":["C","E"]},{"n":"Spring St","b":"M","l":"Lexington Av","r":["6"]},{"n":"Times Sq-42 St","b":"M","l":"Broadway - Brighton","r":["N","Q","R","W"]},{"n":"Times Sq-42 St","b":"M","l":"Broadway - 7Av","r":["1","2","3"]},{"n":"Times Sq-42 St","b":"M","l":"Flushing","r":["7"]},{"n":"Times Sq-42 St","b":"M","l":"Lexington - Shuttle","r":["S"]},{"n":"W 4 St-Wash Sq","b":"M","l":"8th Av - Fulton St","r":["A","B","C","D","E","F","M"]},{"n":"WTC Cortlandt","b":"M","l":"Broadway - 7Av","r":["1"]},{"n":"Wall St","b":"M","l":"Clark St","r":["2","3"]},{"n":"Wall St","b":"M","l":"Lexington Av","r":["4","5"]},{"n":"Whitehall St-South Ferry","b":"M","l":"Broadway","r":["R","W"]},{"n":"World Trade Center","b":"M","l":"8th Av - Fulton St","r":["E"]},{"n":"103 St-Corona Plaza","b":"Q","l":"Flushing","r":["7"]},{"n":"104 St","b":"Q","l":"Jamaica","r":["J","Z"]},{"n":"104 St","b":"Q","l":"Liberty Av","r":["A"]},{"n":"111 St","b":"Q","l":"Jamaica","r":["J"]},{"n":"111 St","b":"Q","l":"Liberty Av","r":["A"]},{"n":"111 St","b":"Q","l":"Flushing","r":["7"]},{"n":"121 St","b":"Q","l":"Jamaica","r":["J","Z"]},{"n":"169 St","b":"Q","l":"Queens Blvd","r":["F"]},{"n":"21 St","b":"Q","l":"Crosstown","r":["G"]},{"n":"21 St-Queensbridge","b":"Q","l":"63rd St","r":["M"]},{"n":"30 Av","b":"Q","l":"Astoria","r":["N","W"]},{"n":"33 St-Rawson St","b":"Q","l":"Flushing","r":["7"]},{"n":"36 Av","b":"Q","l":"Astoria","r":["N","W"]},{"n":"36 St","b":"Q","l":"Queens Blvd","r":["M","R"]},{"n":"39 Av-Dutch Kills","b":"Q","l":"Astoria","r":["N","W"]},{"n":"40 St-Lowery St","b":"Q","l":"Flushing","r":["7"]},{"n":"46 St","b":"Q","l":"Queens Blvd","r":["M","R"]},{"n":"46 St-Bliss St","b":"Q","l":"Flushing","r":["7"]},{"n":"52 St","b":"Q","l":"Flushing","r":["7"]},{"n":"61 St-Woodside","b":"Q","l":"Flushing","r":["7"]},{"n":"63 Dr-Rego Park","b":"Q","l":"Queens Blvd","r":["M","R"]},{"n":"65 St","b":"Q","l":"Queens Blvd","r":["M","R"]},{"n":"67 Av","b":"Q","l":"Queens Blvd","r":["M","R"]},{"n":"69 St","b":"Q","l":"Flushing","r":["7"]},{"n":"74 St-Broadway","b":"Q","l":"Flushing","r":["7"]},{"n":"75 Av","b":"Q","l":"Queens Blvd","r":["E","F"]},{"n":"75 St-Elderts Ln","b":"Q","l":"Jamaica","r":["J","Z"]},{"n":"80 St","b":"Q","l":"Liberty Av","r":["A"]},{"n":"82 St-Jackson Hts","b":"Q","l":"Flushing","r":["7"]},{"n":"85 St-Forest Pkwy","b":"Q","l":"Jamaica","r":["J"]},{"n":"88 St","b":"Q","l":"Liberty Av","r":["A"]},{"n":"90 St-Elmhurst Av","b":"Q","l":"Flushing","r":["7"]},{"n":"Aqueduct Racetrack","b":"Q","l":"Rockaway","r":["A"]},{"n":"Aqueduct-N Conduit Av","b":"Q","l":"Rockaway","r":["A"]},{"n":"Astoria Blvd","b":"Q","l":"Astoria","r":["N","W"]},{"n":"Astoria-Ditmars Blvd","b":"Q","l":"Astoria","r":["N","W"]},{"n":"Beach 105 St","b":"Q","l":"Rockaway","r":["A","S"]},{"n":"Beach 25 St","b":"Q","l":"Rockaway","r":["A"]},{"n":"Beach 36 St","b":"Q","l":"Rockaway","r":["A"]},{"n":"Beach 44 St","b":"Q","l":"Rockaway","r":["A"]},{"n":"Beach 60 St","b":"Q","l":"Rockaway","r":["A"]},{"n":"Beach 67 St","b":"Q","l":"Rockaway","r":["A"]},{"n":"Beach 90 St","b":"Q","l":"Rockaway","r":["A","S"]},{"n":"Beach 98 St","b":"Q","l":"Rockaway","r":["A","S"]},{"n":"Briarwood","b":"Q","l":"Queens Blvd","r":["E","F"]},{"n":"Broad Channel","b":"Q","l":"Rockaway","r":["A","S"]},{"n":"Broadway","b":"Q","l":"Astoria","r":["N","W"]},{"n":"Court Sq","b":"Q","l":"Crosstown","r":["G"]},{"n":"Court Sq","b":"Q","l":"Flushing","r":["7"]},{"n":"Court Sq-23 St","b":"Q","l":"Queens Blvd","r":["E","F"]},{"n":"Elmhurst Av","b":"Q","l":"Queens Blvd","r":["M","R"]},{"n":"Far Rockaway-Mott Av","b":"Q","l":"Rockaway","r":["A"]},{"n":"Flushing-Main St","b":"Q","l":"Flushing","r":["7"]},{"n":"Forest Av","b":"Q","l":"Myrtle Av","r":["M"]},{"n":"Forest Hills-71 Av","b":"Q","l":"Queens Blvd","r":["E","F","M","R"]},{"n":"Fresh Pond Rd","b":"Q","l":"Myrtle Av","r":["M"]},{"n":"Grand Av-Newtown","b":"Q","l":"Queens Blvd","r":["M","R"]},{"n":"Halsey St","b":"Q","l":"Canarsie","r":["L"]},{"n":"Howard Beach-JFK Airport","b":"Q","l":"Rockaway","r":["A"]},{"n":"Hunters Point Av","b":"Q","l":"Flushing","r":["7"]},{"n":"Jackson Hts-Roosevelt Av","b":"Q","l":"Queens Blvd","r":["E","F","M","R"]},{"n":"Jamaica Center-Parsons/Archer","b":"Q","l":"Queens - Archer","r":["E","J","Z"]},{"n":"Jamaica-179 St","b":"Q","l":"Queens Blvd","r":["F"]},{"n":"Jamaica-Van Wyck","b":"Q","l":"Queens - Archer","r":["E"]},{"n":"Junction Blvd","b":"Q","l":"Flushing","r":["7"]},{"n":"Kew Gardens-Union Tpke","b":"Q","l":"Queens Blvd","r":["E","F"]},{"n":"Mets-Willets Point","b":"Q","l":"Flushing","r":["7"]},{"n":"Middle Village-Metropolitan Av","b":"Q","l":"Myrtle Av","r":["M"]},{"n":"Northern Blvd","b":"Q","l":"Queens Blvd","r":["M","R"]},{"n":"Ozone Park-Lefferts Blvd","b":"Q","l":"Liberty Av","r":["A"]},{"n":"Parsons Blvd","b":"Q","l":"Queens Blvd","r":["F"]},{"n":"Queens Plaza","b":"Q","l":"Queens Blvd","r":["E","F","R"]},{"n":"Queensboro Plaza","b":"Q","l":"Astoria","r":["7","N","W"]},{"n":"Rockaway Blvd","b":"Q","l":"Liberty Av","r":["A"]},{"n":"Rockaway Park-Beach 116 St","b":"Q","l":"Rockaway","r":["A","S"]},{"n":"Seneca Av","b":"Q","l":"Myrtle Av","r":["M"]},{"n":"Steinway St","b":"Q","l":"Queens Blvd","r":["M","R"]},{"n":"Sutphin Blvd","b":"Q","l":"Queens Blvd","r":["F"]},{"n":"Sutphin Blvd-Archer Av-JFK Airport","b":"Q","l":"Queens - Archer","r":["E","J","Z"]},{"n":"Vernon Blvd-Jackson Av","b":"Q","l":"Flushing","r":["7"]},{"n":"Woodhaven Blvd","b":"Q","l":"Jamaica","r":["J","Z"]},{"n":"Woodhaven Blvd","b":"Q","l":"Queens Blvd","r":["M","R"]},{"n":"Annadale","b":"SI","l":"Staten Island","r":["SIR"]},{"n":"Arthur Kill","b":"SI","l":"Staten Island","r":["SIR"]},{"n":"Bay Terrace","b":"SI","l":"Staten Island","r":["SIR"]},{"n":"Clifton","b":"SI","l":"Staten Island","r":["SIR"]},{"n":"Dongan Hills","b":"SI","l":"Staten Island","r":["SIR"]},{"n":"Eltingville","b":"SI","l":"Staten Island","r":["SIR"]},{"n":"Grant City","b":"SI","l":"Staten Island","r":["SIR"]},{"n":"Grasmere","b":"SI","l":"Staten Island","r":["SIR"]},{"n":"Great Kills","b":"SI","l":"Staten Island","r":["SIR"]},{"n":"Huguenot","b":"SI","l":"Staten Island","r":["SIR"]},{"n":"Jefferson Av","b":"SI","l":"Staten Island","r":["SIR"]},{"n":"New Dorp","b":"SI","l":"Staten Island","r":["SIR"]},{"n":"Oakwood Heights","b":"SI","l":"Staten Island","r":["SIR"]},{"n":"Old Town","b":"SI","l":"Staten Island","r":["SIR"]},{"n":"Pleasant Plains","b":"SI","l":"Staten Island","r":["SIR"]},{"n":"Prince's Bay","b":"SI","l":"Staten Island","r":["SIR"]},{"n":"Richmond Valley","b":"SI","l":"Staten Island","r":["SIR"]},{"n":"St George","b":"SI","l":"Staten Island","r":["SIR"]},{"n":"Stapleton","b":"SI","l":"Staten Island","r":["SIR"]},{"n":"Tompkinsville","b":"SI","l":"Staten Island","r":["SIR"]},{"n":"Tottenville","b":"SI","l":"Staten Island","r":["SIR"]}];
+
+const BORO = {M:"Manhattan", Bk:"Brooklyn", Q:"Queens", Bx:"Bronx", SI:"Staten Island"};
+const COLORS = {
+  "1":"#EE352E","2":"#EE352E","3":"#EE352E",
+  "4":"#00933C","5":"#00933C","6":"#00933C",
+  "7":"#B933AD",
+  "A":"#0039A6","C":"#0039A6","E":"#0039A6",
+  "B":"#FF6319","D":"#FF6319","F":"#FF6319","M":"#FF6319",
+  "G":"#6CBE45",
+  "J":"#996633","Z":"#996633",
+  "L":"#A7A9AC",
+  "N":"#FCCC0A","Q":"#FCCC0A","R":"#FCCC0A","W":"#FCCC0A",
+  "S":"#808183",
+  "SIR":"#0039A6"
+};
+const DARKTEXT = new Set(["N","Q","R","W"]); // yellow bullets need dark text
+
+const el = id => document.getElementById(id);
+let deck = [], current = null, revealed = false;
+let correct = 0, seen = 0, streak = 0;
+let activeBoros = new Set(Object.keys(BORO));
+
+function buildFilters(){
+  const f = el("filters");
+  f.innerHTML = "";
+  for(const code of Object.keys(BORO)){
+    const c = document.createElement("span");
+    c.className = "chip on";
+    c.textContent = BORO[code];
+    c.onclick = () => {
+      if(activeBoros.has(code)){ activeBoros.delete(code); c.classList.remove("on"); }
+      else { activeBoros.add(code); c.classList.add("on"); }
+      if(activeBoros.size===0){ activeBoros.add(code); c.classList.add("on"); return; }
+      buildDeck(); nextCard();
+    };
+    f.appendChild(c);
+  }
+}
+
+function shuffle(a){
+  for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a;
+}
+function buildDeck(){
+  deck = shuffle(STATIONS.filter(s => activeBoros.has(s.b)).slice());
+  el("sDeck").textContent = deck.length;
+}
+
+function normalize(str){
+  return str.toUpperCase().replace(/[^A-Z0-9]/g," ").split(/\s+/).filter(Boolean);
+}
+
+function makeBullet(route, dim){
+  const b = document.createElement("div");
+  b.className = "bullet" + (route==="SIR"?" sir":"") + (dim?" dim":"");
+  b.style.background = COLORS[route] || "#555";
+  b.style.color = DARKTEXT.has(route) ? "#000" : "#fff";
+  b.textContent = route;
+  return b;
+}
+
+function nextCard(){
+  revealed = false;
+  if(deck.length===0) buildDeck();
+  current = deck.pop();
+  el("sDeck").textContent = deck.length;
+  el("boro").textContent = BORO[current.b] || current.b;
+  el("name").textContent = current.n;
+  el("lineName").textContent = current.l ? current.l + " Line" : "";
+  el("guess").value = "";
+  el("bullets").classList.add("hidden");
+  el("bullets").innerHTML = "";
+  el("verdict").textContent = ""; el("verdict").className = "verdict";
+  el("guessWrap").classList.remove("hidden");
+  el("preReveal").classList.remove("hidden");
+  el("postReveal").classList.add("hidden");
+  el("guess").focus();
+}
+
+function reveal(){
+  if(revealed) return;
+  revealed = true;
+  seen++; el("sSeen").textContent = seen;
+
+  const answer = current.r;
+  const guess = normalize(el("guess").value);
+  const guessed = new Set(guess);
+  const ansSet = new Set(answer);
+
+  const bd = el("bullets");
+  bd.innerHTML = "";
+  answer.forEach(rt => bd.appendChild(makeBullet(rt, false)));
+  bd.classList.remove("hidden");
+
+  el("guessWrap").classList.add("hidden");
+  el("preReveal").classList.add("hidden");
+  el("postReveal").classList.remove("hidden");
+
+  const v = el("verdict");
+  if(guess.length){
+    const exact = ansSet.size===guessed.size && [...ansSet].every(r=>guessed.has(r));
+    if(exact){
+      v.textContent = "✓ Correct!"; v.className = "verdict ok";
+      correct++; streak++;
+    } else {
+      const missed = [...ansSet].filter(r=>!guessed.has(r));
+      const wrong  = [...guessed].filter(r=>!ansSet.has(r));
+      let msg = "✗ Not quite.";
+      if(missed.length) msg += " Missed: " + missed.join(" ") + ".";
+      if(wrong.length)  msg += " Extra: " + wrong.join(" ") + ".";
+      v.textContent = msg; v.className = "verdict no";
+      streak = 0;
+    }
+    el("sCorrect").textContent = correct;
+    el("sStreak").textContent = streak;
+  } else {
+    v.textContent = "Self-grade below."; v.className = "verdict";
+  }
+}
+
+function grade(got){
+  // used when no typed guess (or override). Only adjust if not already scored via typed guess.
+  if(!normalize(el("guess")?.value||"").length){
+    if(got){ correct++; streak++; } else { streak = 0; }
+    el("sCorrect").textContent = correct;
+    el("sStreak").textContent = streak;
+  }
+  nextCard();
+}
+
+el("revealBtn").onclick = reveal;
+el("skipBtn").onclick = nextCard;
+el("gotBtn").onclick = () => grade(true);
+el("missBtn").onclick = () => grade(false);
+el("guess").addEventListener("keydown", e => { if(e.key==="Enter") reveal(); });
+document.addEventListener("keydown", e => {
+  if(e.key===" " && revealed){ e.preventDefault(); nextCard(); }
+});
+
+buildFilters();
+buildDeck();
+nextCard();
+</script>
+</body>
+</html>
