@@ -1,0 +1,127 @@
+:root{
+  --bg:#0e0f13; --panel:#181a20; --panel2:#20232b; --line:#2b2f39;
+  --text:#f2f3f5; --muted:#9aa0ad; --accent:#3b82f6;
+  --good:#2ecc71; --bad:#ff5a5f;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--bg); color:var(--text); font-family:var(--sans);
+  min-height:100vh; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:640px; margin:0 auto; padding:28px 18px 80px}
+.hidden{display:none !important}
+
+/* top bar */
+.topbar{display:flex; align-items:center; gap:12px; margin-bottom:6px}
+.topbar h1{font-size:19px; font-weight:700; letter-spacing:.2px; margin:0}
+.topbar h1 .tag{font-family:var(--mono); color:var(--muted); font-weight:500}
+.back{
+  border:1px solid var(--line); background:var(--panel); color:var(--text);
+  border-radius:9px; padding:6px 12px; font-size:13px; cursor:pointer; font-family:var(--mono);
+}
+.back:hover{border-color:var(--muted)}
+.mode-title{font-family:var(--mono); font-size:13px; color:var(--muted); margin-left:auto}
+.sub{color:var(--muted); font-size:13px; margin:2px 0 22px}
+
+/* home */
+.home-stats{
+  display:flex; gap:22px; font-family:var(--mono); font-size:12px; color:var(--muted);
+  border:1px solid var(--line); background:var(--panel); border-radius:12px;
+  padding:12px 16px; margin-bottom:18px;
+}
+.home-stats b{color:var(--text); font-size:15px; display:block; margin-top:2px}
+.mode-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px}
+.mode-tile{
+  display:block; text-decoration:none; color:inherit; background:var(--panel);
+  border:1px solid var(--line); border-radius:14px; padding:18px;
+  transition:border-color .15s ease, transform .15s ease;
+}
+.mode-tile:hover{border-color:var(--accent); transform:translateY(-2px)}
+.mode-tile__phase{font-family:var(--mono); font-size:10px; letter-spacing:.09em; color:var(--muted); margin-bottom:9px}
+.mode-tile__title{font-size:17px; font-weight:700; margin-bottom:6px}
+.mode-tile__desc{font-size:13px; color:var(--muted); line-height:1.5}
+
+/* route bullets */
+.bullet{
+  width:34px; height:34px; border-radius:50%; display:inline-flex; align-items:center;
+  justify-content:center; font-weight:800; font-size:17px; flex:0 0 auto; font-family:var(--sans);
+}
+.bullet--lg{width:46px; height:46px; font-size:23px}
+.bullet--sir{font-size:11px}
+.bullet--lg.bullet--sir{font-size:14px}
+.bullets{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; min-height:40px; margin:6px 0 16px}
+
+/* shared card / inputs / buttons */
+.card{
+  background:var(--panel); border:1px solid var(--line); border-radius:18px;
+  padding:30px 22px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.3);
+}
+.badge{
+  display:inline-block; font-size:11px; letter-spacing:1px; text-transform:uppercase;
+  color:var(--muted); background:var(--panel2); padding:4px 12px; border-radius:999px; margin-bottom:14px;
+}
+.hint{color:var(--muted); font-size:12px; margin-bottom:12px}
+.guess{
+  width:100%; padding:12px 14px; border-radius:12px; border:1px solid var(--line);
+  background:var(--panel2); color:var(--text); font-size:16px; outline:none; font-family:var(--sans);
+}
+.guess:focus{border-color:var(--accent)}
+.btn{
+  padding:11px 18px; border-radius:11px; border:none; font-size:14px; font-weight:600;
+  cursor:pointer; background:var(--panel2); color:var(--text);
+}
+.btn:hover{filter:brightness(1.15)}
+.btn--primary{background:var(--accent); color:#fff}
+.btn--good{background:var(--good); color:#053}
+.btn--bad{background:var(--bad); color:#400}
+.btnrow{display:flex; gap:10px; justify-content:center; flex-wrap:wrap}
+
+/* flashcards */
+.fc-stats{display:flex; gap:20px; justify-content:center; font-family:var(--mono); font-size:12px; color:var(--muted); margin-bottom:14px}
+.fc-stats b{color:var(--text); font-size:15px}
+.fc-card .guess{text-align:center; letter-spacing:2px; text-transform:uppercase}
+.fc-name{font-size:29px; font-weight:800; line-height:1.15; margin-bottom:6px}
+.fc-line{color:var(--muted); font-size:13px; margin-bottom:22px}
+.verdict{font-size:14px; font-weight:600; margin:0 0 16px; min-height:19px}
+.verdict--ok{color:var(--good)} .verdict--no{color:var(--bad)}
+
+/* name-the-line */
+.ns-picker{display:flex; flex-wrap:wrap; gap:7px; margin-bottom:18px}
+.ns-pick{
+  padding:5px; border-radius:10px; border:1px solid transparent; background:transparent;
+  cursor:pointer; line-height:0;
+}
+.ns-pick:hover{border-color:var(--line)}
+.ns-pick--on{border-color:var(--accent); background:var(--panel)}
+.ns-head{display:flex; align-items:center; gap:14px; margin-bottom:12px}
+.ns-head__long{font-size:18px; font-weight:700}
+.ns-head__sub{font-family:var(--mono); font-size:12px; color:var(--muted); margin-top:3px}
+.ns-best{color:var(--accent)}
+.ns-bar{height:6px; background:var(--panel2); border-radius:99px; overflow:hidden; margin-bottom:14px}
+.ns-bar__fill{height:100%; width:0; background:var(--accent); transition:width .2s ease}
+.ns-input{margin-bottom:12px}
+.ns-controls{display:flex; gap:10px; margin-bottom:14px}
+.ns-banner{border-radius:12px; padding:12px 14px; font-weight:600; font-size:14px; margin-bottom:14px; text-align:center}
+.ns-banner--win{background:rgba(46,204,113,.14); color:var(--good); border:1px solid rgba(46,204,113,.4)}
+.ns-banner--end{background:rgba(255,90,95,.12); color:var(--bad); border:1px solid rgba(255,90,95,.35)}
+.ns-list{display:flex; flex-direction:column; gap:5px}
+.slot{
+  display:grid; grid-template-columns:34px 1fr auto; align-items:center; gap:10px;
+  padding:9px 12px; border-radius:9px; background:var(--panel); border:1px solid var(--line);
+  min-height:40px;
+}
+.slot__num{font-family:var(--mono); font-size:12px; color:var(--muted); text-align:right}
+.slot__name{font-weight:600; font-size:15px}
+.slot__boro{font-family:var(--mono); font-size:11px; color:var(--muted)}
+.slot--got{border-color:rgba(46,204,113,.5); background:rgba(46,204,113,.08)}
+.slot--got .slot__name{color:var(--good)}
+.slot--missed{border-color:rgba(255,90,95,.45); background:rgba(255,90,95,.07)}
+.slot--missed .slot__name{color:var(--bad)}
+
+@media (max-width:480px){
+  .fc-name{font-size:24px}
+  .home-stats{gap:14px}
+}
