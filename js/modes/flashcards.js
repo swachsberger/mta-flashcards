@@ -68,8 +68,17 @@
       el("fcGuess").focus();
     }
 
+    // Tokenize a guess into route labels. Accepts any separator AND runs with no
+    // separators ("654" -> 6,5,4; "nqr" -> N,Q,R). "SIR" is the only multi-char
+    // route, so a bare "SIR" chunk is kept whole; every other chunk splits per char.
     function norm(str) {
-      return str.toUpperCase().replace(/[^A-Z0-9]/g, " ").split(/\s+/).filter(Boolean);
+      var toks = [];
+      str.toUpperCase().replace(/[^A-Z0-9]/g, " ").split(/\s+/).filter(Boolean)
+        .forEach(function (chunk) {
+          if (chunk === "SIR") { toks.push("SIR"); return; }
+          chunk.split("").forEach(function (ch) { toks.push(ch); });
+        });
+      return toks;
     }
 
     function reveal() {
@@ -91,7 +100,8 @@
 
       var v = el("fcVerdict");
       if (guess.length) {
-        var exact = answer.length === guess.length &&
+        // set comparison: order- and duplicate-independent
+        var exact = Object.keys(guessed).length === answer.length &&
           answer.every(function (r) { return guessed[r]; });
         if (exact) {
           v.textContent = "✓ Correct!"; v.className = "verdict verdict--ok";
