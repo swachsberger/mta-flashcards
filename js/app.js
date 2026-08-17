@@ -43,6 +43,7 @@ window.App = (function () {
       view.classList.remove("hidden");
       backBtn.classList.remove("hidden");
       titleEl.textContent = mode.title;
+      titleEl.classList.add("crumb--on");
       view.innerHTML = "";
       if (mode._teardown) { try { mode._teardown(); } catch (e) {} }
       mode._teardown = mode.mount(view) || null;
@@ -51,6 +52,7 @@ window.App = (function () {
       view.innerHTML = "";
       backBtn.classList.add("hidden");
       titleEl.textContent = "";
+      titleEl.classList.remove("crumb--on");
       home.classList.remove("hidden");
       renderHome();
     }
